@@ -1,52 +1,62 @@
 #!/usr/bin python3
-import keras.layers import Dense, Flatten, Input, Reshape
-import keras.model import Model as KerasModel
+""" The script to run the training process of faceswap """
 
-from keras.layers.advanced_activations import LeakyReLU
-from keras.layers.convolutional import Conv2D
+import logging, os
+
+from plugins.plugin_loader import PluginLoader
+
+logger = logging.getLogger(__name__)
+
+# Model directory. This is where the training data will be stored.
+MODEL_DIR = '../output/model'
 
 
-IMAGE_SHAPE = (64, 64, 3)
+class Train():
+    def __init__(self):
+        logger.debug("Initializing Train Model")
+        if not os.path.exists(MODEL_DIR):
+            os.makedirs(MODEL_DIR)
 
-class Model:
-    def conv(self, filters):
-        def block(x):
-            x = Conv2D(filters, kernel_size=5, strides=2, padding='same')(x)
-            x = LeakyRelu(0.1)(x)
-            return x
-        return block
+    def process(self):
+        logger.debug("Starting Training Process")
+        self.training()
+        
+        
+    def training(self):
+        try:
+            model = self.load_model()
+            trainer = self.load_trainer(model)
+            self.run_training_cycle(mode, trainer)
+        except KeyboardInterrupt:
+            try:
+                logger.debug("Keyboard Interrupt Caught. Saving Weights and exiting")
+                model.save_models()
+                trainer.clear_tensorboard()
+            except KeyboardInterrupt:
+                logger.info("Saving model weights has been cancelled!")
+            exit(0)
+        except Exception as err:
+            raise err
+            
+    
+    def load_model(self):
+        logger.debug("Loading Model")
+        model = PluginLoader.get_model(self.trainer_name)(
+            model_dir,
+            predict=False)
+        return model
     
     
-    def upscale(self, filters):
-        def block(x):
-            x = Conv2D(filters * 4, kernel_size=3, padding='same')(x)
-            x = LeakyReLU(0.1)(X)
-            return x
-        return block
-    
-                
-    def encoder(self):
-        x_input = Input(IMAGE_SHAPE)
-        x = x_input
-        x = self.conv(128)(x)
-        x = self.conv(256)(x)
-        x = self.conv(512)(x)
-        x = self.conv(1024)(x)
-        x = Dense(1024)(Flatten()(x))
-        x = Dense(4 * 4 * 1024)(x)
-        x = Reshape((4, 4, 1024))(x)
-        x = self.upscale(512)(x)
-        return KerasModel(inputs=x_input, outputs=x)
-    
-    
-    def decoder(self):
-        x_input = Input((8, 8, 512))
-        x = x_input
-        x = self.upscale(256)(x)
-        x = self.upscale(128)(x)
-        x = self.upscale(64)(x)
-        x = Conv2D(3, kernel_size=5, padding='same', activateion='sigmoid')(x)
-        return KerasModel(inputs=x_input, outputs=x)
+    def load_trainer(self, model):
+        logger.debug("Loading Trainer")
+        trainer = PluginLoader.get_trainer(model.trainer)
+        trainer = trainer(mode, 
+                          self.images, 
+                          self.args.batch_size)
+        return trainer
+        
+        
+
         
         
     
