@@ -8,6 +8,8 @@ from os.path import exists, isfile, join
 FRONT_FACE_CASCADE = cv.CascadeClassifier('scripts/haarcascades/haarcascade_frontalface_default.xml')
 PROFILE_FACE_CASCADE = cv.CascadeClassifier('scripts/haarcascades/haarcascade_profileface.xml')
 
+# TODO: Need a function to put images in S3 bucket.
+# TODO: Retrieve face images from a given video file.
 
 class FaceImageCollector():
     """ Face photo collector """        
