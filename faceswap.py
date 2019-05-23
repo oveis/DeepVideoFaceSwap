@@ -12,15 +12,9 @@ class DeepVideoFaceSwap:
         collector.collect(celebrity, output_dir, limit)
         
 
-    def train(self, batch_size, iterations, input_a, input_b):
-        arguments = {
-            'batch_size': batch_size,
-            'iterations': iterations,
-            'input_a': input_a,
-            'input_b': input_b
-        }
+    def train(self, trainer_name, batch_size, iterations, input_a, input_b, model_dir):
         try:
-            train = Train(arguments)
+            train = Train(trainer_name, batch_size, iterations, input_a, input_b, model_dir)
             train.process()
         except KeyboardInterrupt:
             raise
@@ -44,10 +38,13 @@ if __name__ == '__main__":
     parser.add_argument('--limit', type=int, default=100)
     
     # Train arguments
-    parser.add_argument('--input-A', help="Person A's face image dataset to train")
-    parser.add_argument('--input-B', help="Person B's face image dataset to train")
+    parser.add_argument('--trainer-name', default='original')
     parser.add_argument('--batch-size', type=int, default=10)
     parser.add_argument('--iterations', type=int, default=10)
+    parser.add_argument('--input-A', help="Person A's face image dataset to train")
+    parser.add_argument('--input-B', help="Person B's face image dataset to train")
+    parser.add_argument('--model-dir', help="Model directory where the training data will be stored")
+    parser.add_argument('--num-gpu', type=int, default=1)
     
     # Convert arguments
     
@@ -58,6 +55,7 @@ if __name__ == '__main__":
     if args.task == 'preprocess':
         face_swap.preprocess(args.celebrity, args.output_dir, args.limit)
     elif args.task == 'train':
-        face_swap.train(args.batch_size, args.iterations, args.input_A, args.input_B)
+        face_swap.train(args.trainer_name, args.batch_size, args.iterations, args.input_A, args.input_B,
+                       args.model_dir, args.num_gpu)
     elif args.task == 'convert':
         face_swap.convert()

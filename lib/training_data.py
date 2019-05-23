@@ -21,4 +21,4 @@ class TrainingDataGenerator():
         
         # TODO: The Original code implemented complicately here, because it concerns
         #       multithreading. Let's simplify here. 
-            
+        raise NotImplementedError()

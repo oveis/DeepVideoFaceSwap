@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """ Base Trainer Class """
 
+import logging
 from lib.training_data import TrainingDataGenerator
 
 logger = logging.getLogger(__name__)

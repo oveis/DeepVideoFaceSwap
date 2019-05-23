@@ -1,9 +1,7 @@
 #!/usr/bin python3
 
-import keras.layers import Dense, Flatten, Input, Reshape
-import keras.model import Model as KerasModel
-
-from keras.layers.convolutional import Conv2D
+from keras.layers import Conv2D, Dense, Flatten, Input, Reshape
+from keras.models import Model as KerasModel
 from ._base import ModelBase, logger
 
 
@@ -15,7 +13,8 @@ class Model(ModelBase):
             kwargs['input_shape'] = (64, 64, 3)
         if 'encoder_dim' not in kwargs:
             kwargs['encoder_dim'] = 1024
-           
+        
+        kwargs['trainer_name'] = 'original'
         super().__init__(*args, **kwargs)
         
         
@@ -55,8 +54,8 @@ class Model(ModelBase):
         var_x = self.blocks.upscale(var_x, 256)
         var_x = self.blocks.upscale(var_x, 128)
         var_x = self.blocks.upscale(var_x, 64)
-        var_x = Conv2D(3, kernel_size=5, padding='same', activateion='sigmoid')(var_x)
-        outpus = [var_x]
+        var_x = Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(var_x)
+        outputs = [var_x]
         return KerasModel(inputs=input_, outputs=outputs)
         
         
