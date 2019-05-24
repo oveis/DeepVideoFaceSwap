@@ -5,11 +5,15 @@ import logging
 import os
 import time
 
+from json import JSONDecodeError
+
 from keras import losses
 from keras import backend as K
 from keras.models import load_model
+from keras.optimizers import Adam
 from keras.utils import get_custom_objects, multi_gpu_model
 
+from lib import Serializer
 from lib.model.losses import DSSIMObjective
 from lib.model.nn_blocks import NNBlocks
 # from lib.multithreading import MultiThread
@@ -48,6 +52,10 @@ class ModelBase():
         self.networks = dict()            # Networks for the model
         self.predictors = dict()          # Predictors for model
         self.history = dict()             # Loss history per save iteration
+        
+        # Training information specific to the model should be placed in this
+        # dict for reference by the trainer.
+        self.training_opts = {'training_size': training_image_size}
 
         self.build()
             
@@ -66,6 +74,13 @@ class ModelBase():
 #             model_name = self.config_section
 #             _CONFIG = Config(model_name).config_dict
 #         return _CONFIG
+    
+    
+    @property
+    def iterations(self):
+        """ Get current training iteration number """
+        return self.state.iterations
+    
     
     @property
     def models_exist(self):
@@ -88,6 +103,7 @@ class ModelBase():
         
         name = network_type.lower() + ('_{}'.format(side.lower()) if side else '')
         filename = 'train_{}.h5'.format(name)
+        print('[TEST] creating NNMeta: name: {}'.format(name))
         self.networks[name] = NNMeta(os.path.join(self.model_dir, filename), network_type, side, network)
 
     
@@ -207,6 +223,7 @@ class NNMeta():
     """ Class to hold a neural network and it's meta data """
     
     def __init__(self, filename, network_type, side, network):
+        print('[TEST] NNMeta initiated: filename: {}, network_type: {}, side: {}'.format(filename, network_type, side))
         self.filename = filename
         self.type = network_type.lower()
         self.side = side
@@ -244,16 +261,71 @@ class NNMeta():
 class State():
     """ Class to hold the model's current state and autoencoder structure """
     def __init__(self, model_dir, model_name, training_image_size):
+        self.serializer = Serializer.get_serializer("json")
+        filename = "{}_state.{}".format(model_name, self.serializer.ext)
+        self.filename = str(model_dir / filename)
         self.name = model_name
         self.iterations = 0
         self.session_iterations = 0
         self.training_size = training_image_size
         self.sessions = dict()
+        self.lowest_avg_loss = dict()
         self.inputs = dict()
-        self.session_id = self._new_session_id()
-        self._create_new_session()
+        self.config = dict()
+        self.load()
+        self.session_id = self.new_session_id()
+        self.create_new_session()
         
 
+    @property
+    def face_shapes(self):
+        """ Return a list of stored face shape inputs """
+        return [tutple(val) for key, val in self.inputs.items() if key.startswith('face')]
+    
+    
+    @property
+    def mask_shapes(self):
+        """ Return a list of stored mask shape inputs """
+        return [tuple(val) for key, val in self.inputs.items() if key.startswith('mask')]
+    
+    
+    @property
+    def loss_name(self):
+        """ Return the loss names for this session """
+        return self.sessions[self.session_id]['loss_names']
+    
+    
+    @property
+    def current_session(self):
+        """ Return the current session dict """
+        return self.sessions[self.session_id]
+    
+    
+    def new_session_id(self):
+        """ Return new session_id """
+        if not self.sessions:
+            return 1
+        else:
+            return max(int(key) for key in self.sessions.keys()) + 1
+
+        
+    def create_new_session(self):
+        """ Create a new session """
+        print('[TEST] create_new_session: id: {}'.format(self.session_id))
+        self.sessions[self.session_id] = {'timestamp': time.time(),
+                                          'loss_names': dict(),
+                                          'batchsize': 0,
+                                          'iterations': 0}
+        
+        
+    def add_session_loss_names(self, side, loss_names):
+        """ Add the session loss names to the sessions dictionary """
+        print('[TEST] add_session: id: {}'.format(self.session_id))
+        print('[TEST] sessions: {}'.format(self.sessions))
+        print('[TEST] sessions[self.session_id]: {}'.format(self.sessions[self.session_id].keys()))
+        self.sessions[self.session_id]['loss_names'][side] = loss_names
+        
+        
     def add_session_batchsize(self, batchsize):
         """ Add the session batchsize to the sessions dictionary """
         self.sessions[self.session_id]['batchsize'] = batchsize
@@ -265,18 +337,42 @@ class State():
         self.sessions[self.session_id]['iterations'] += 1
 
         
-    def _new_session_id(self):
-        """ Return new session_id """
-        if not self.sessions:
-            return 1
-        else:
-            return max(int(key) for key in self.sessions.keys()) + 1
+    def load(self):
+        """ Load state file """
+        try:
+            with open(self.filename, "rb") as inp:
+                state = self.serializer.unmarshal(inp.read().decode('utf-8'))
+                self.name = state.get('name', self.name)
+                self.sessions = state.get('sessions', dict())
+                self.lowest_avg_loss = state.get('lowest_avg_loss', dict())
+                self.iterations = state.get('iterations', 0)
+                self.training_size = state.get('training_size', 256)
+                self.inputs = state.get('inputs', dict())
+                self.config = state.get('config', dict())
+        except IOError as err:
+            logger.warning('No existing state file found.')
+        except JSONDecodeError:
+            logger.exception('JSONDecodeError')
+            
+    
+    def save(self):
+        """ Save iteration number to state file """
+        try:
+            with open(self.filename, 'wb') as out:
+                state = {'name': self.name,
+                         'sessions': self.sessions,
+                         'lowest_avg_loss': self.lowest_avg_loss,
+                         'iterations': self.iterations,
+                         'inputs': self.inputs,
+                         'training_size': self.training_size}
+                
+                state_json = self.serializer.marshal(state)
+                out.write(state_json.encode('utf-8'))
+        except IOError as err:
+            logger.exception('Unable to save model state')
+                         
+                
         
         
-    def _create_new_session(self):
-        """ Create a new session """
-        self.sessions[self.session_id] = {'timestamp': time.time(),
-                                          'loss_names': dict(),
-                                          'batchsize': 0,
-                                          'iterations': 0}
+    
         

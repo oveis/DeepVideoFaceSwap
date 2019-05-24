@@ -23,7 +23,7 @@ class TrainerBase():
     
     def train_one_step(self):
         """ Train a batch """
-        logger.trace("Training one step: (iteration: %s)", self.model.iterations)
+        logger.info("Training one step: (iteration: %s)", self.model.iterations)
         loss = dict()
         for side, batcher in self.batchers.items():
             loss[side] = batcher.train_one_batch()
@@ -35,13 +35,14 @@ class TrainerBase():
             
             
     def store_history(self, side, loss):
-        logger.trace("Updating loss history: '%s'", side)
+        logger.info("Updating loss history: '%s'", side)
         self.model.history[side].append(loss[0])
         
 
 class Batcher():
     """ Batch images from a single side """
     def __init__(self, side, images, model, batch_size):
+        print('[TEST] side: {}, batch_size: {}'.format(side, batch_size))
         self.model = model
         self.side = side
         self.feed = self.load_generator().minibatch_ab(images, batch_size, self.side)
@@ -57,7 +58,7 @@ class Batcher():
     
     def train_one_batch(self):
         """ Train a batch """
-        logger.trace("Training one step: (side: %s)", self.side)
+        logger.info("Training one step: (side: %s)", self.side)
         batch = self.get_next()
         loss = self.model.predictors[self.side].train_on_batch(*batch)
         loss = loss if isinstance(loss, list) else [loss]

@@ -82,7 +82,8 @@ class Train():
     
     def _run_training_cycle(self, model, trainer):
         for iteration in range(self.iterations):
-            logger.trace('Training iteration: %s', iteration)
+            logger.info('Training iteration: %s', iteration)
+            print('[TEST] Training iteration: {}'.format(iteration))
             trainer.train_one_step()                                 # here: Start here.
             
         model.save_models()
@@ -92,7 +93,7 @@ class Train():
         try:
             model = self._load_model()
             trainer = self._load_trainer(model)
-            self._run_training_cycle(mode, trainer)
+            self._run_training_cycle(model, trainer)
         except KeyboardInterrupt:
             try:
                 logger.debug("Keyboard Interrupt Caught. Saving Weights and exiting")

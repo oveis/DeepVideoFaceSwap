@@ -14,7 +14,8 @@ PROFILE_FACE_CASCADE = cv.CascadeClassifier('scripts/haarcascades/haarcascade_pr
 class FaceImageCollector():
     """ Face photo collector """        
     
-    def collect(self, keywords, output_dir, limit=50):
+    def collect(self, keywords, output_dir, limit=50, face_img_shape=(64, 64)):
+        self.face_img_shape = face_img_shape
         images_dir = join(output_dir, 'images')
         faces_dir = join(output_dir, 'faces')
 
@@ -43,8 +44,12 @@ class FaceImageCollector():
             x, y, w, h = faces[i]
             face_img = img[y:y+h, x:x+w]
             output_file_path = join(output_dir, '{}_{}.jpeg'.format(file_id, i))
+            
+            print(output_file_path)
+            face_img = cv.resize(face_img, self.face_img_shape)
+            
             cv.imwrite(output_file_path, face_img)
-
+            
 
     def _detect_and_save_faces(self, images_dir, faces_dir):
         self._check_dir_path(images_dir)

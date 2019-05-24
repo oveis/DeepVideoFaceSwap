@@ -3,7 +3,9 @@
 
 import logging
 
+from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import Conv2D
+from .layers import PixelShuffler
 
 logger = logging.getLogger(__name__)
 
@@ -25,4 +27,6 @@ class NNBlocks():
         var_x = Conv2D(filters * 4,
                      kernel_size=kernel_size,
                      padding=padding)(inp)
+        var_x = LeakyReLU(0.1)(var_x)
+        var_x = PixelShuffler()(var_x)
         return var_x
