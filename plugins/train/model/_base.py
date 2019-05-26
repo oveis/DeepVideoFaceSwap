@@ -103,7 +103,6 @@ class ModelBase():
         
         name = network_type.lower() + ('_{}'.format(side.lower()) if side else '')
         filename = 'train_{}.h5'.format(name)
-        print('[TEST] creating NNMeta: name: {}'.format(name))
         self.networks[name] = NNMeta(os.path.join(self.model_dir, filename), network_type, side, network)
 
     
@@ -223,7 +222,6 @@ class NNMeta():
     """ Class to hold a neural network and it's meta data """
     
     def __init__(self, filename, network_type, side, network):
-        print('[TEST] NNMeta initiated: filename: {}, network_type: {}, side: {}'.format(filename, network_type, side))
         self.filename = filename
         self.type = network_type.lower()
         self.side = side
@@ -311,7 +309,6 @@ class State():
         
     def create_new_session(self):
         """ Create a new session """
-        print('[TEST] create_new_session: id: {}'.format(self.session_id))
         self.sessions[self.session_id] = {'timestamp': time.time(),
                                           'loss_names': dict(),
                                           'batchsize': 0,
@@ -320,9 +317,6 @@ class State():
         
     def add_session_loss_names(self, side, loss_names):
         """ Add the session loss names to the sessions dictionary """
-        print('[TEST] add_session: id: {}'.format(self.session_id))
-        print('[TEST] sessions: {}'.format(self.sessions))
-        print('[TEST] sessions[self.session_id]: {}'.format(self.sessions[self.session_id].keys()))
         self.sessions[self.session_id]['loss_names'][side] = loss_names
         
         

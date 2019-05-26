@@ -42,7 +42,6 @@ class TrainerBase():
 class Batcher():
     """ Batch images from a single side """
     def __init__(self, side, images, model, batch_size):
-        print('[TEST] side: {}, batch_size: {}'.format(side, batch_size))
         self.model = model
         self.side = side
         self.feed = self.load_generator().minibatch_ab(images, batch_size, self.side)

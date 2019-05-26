@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 
+import argparse
+import logging
+
 from scripts.data_collector import FaceImageCollector
 from scripts.train import Train
+
+logger = logging.getLogger(__name__)
 
 
 class DeepVideoFaceSwap:
@@ -12,9 +17,9 @@ class DeepVideoFaceSwap:
         collector.collect(celebrity, output_dir, limit)
         
 
-    def train(self, trainer_name, batch_size, iterations, input_a, input_b, model_dir):
+    def train(self, trainer_name, batch_size, iterations, input_a, input_b, model_dir, num_gpu):
         try:
-            train = Train(trainer_name, batch_size, iterations, input_a, input_b, model_dir)
+            train = Train(trainer_name, batch_size, iterations, input_a, input_b, model_dir, num_gpu)
             train.process()
         except KeyboardInterrupt:
             raise
@@ -25,12 +30,26 @@ class DeepVideoFaceSwap:
     
     
     def convert(self):
-        pass
+        raise NotImplementedError()
+
+
+def set_log_level(log_level):
+    if (log_level == 'warning'):
+        level = logging.WARNING
+    elif (log_level == 'info'):
+        level = logging.INFO
+    elif (log_level == 'debug'):
+        level = logging.DEBUG
+    else:
+        level = logging.ERROR
+
+    logging.basicConfig(filename='log_{}.log'.format(log_level), level=level)
     
     
-if __name__ == '__main__":
+if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('task', choices=['preprocess', 'train', 'convert'])
+    parser.add_argument('--log', choices=['error', 'warning', 'info', 'debug'], default='error')
     
     # Preprocess arguments
     parser.add_argument('--celebrity', default=None)
@@ -51,6 +70,7 @@ if __name__ == '__main__":
     args = parser.parse_args()
     
     face_swap = DeepVideoFaceSwap()
+    set_log_level(args.log)
     
     if args.task == 'preprocess':
         face_swap.preprocess(args.celebrity, args.output_dir, args.limit)

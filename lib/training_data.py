@@ -2,6 +2,7 @@
 """ Process training data for model training """
 
 import logging
+import cv2
 
 from lib.multithreading import FixedProducerDispatcher
 from lib.queue_manager import queue_manager
@@ -18,7 +19,7 @@ class TrainingDataGenerator():
         self.model_output_size = model_output_size
         self.training_opts = training_opts
         
-    
+        
     @staticmethod
     def minibatch(side, load_process):
         """ A generator function that yield epoch, batchsize of warped_img
@@ -34,8 +35,8 @@ class TrainingDataGenerator():
     @staticmethod
     def make_queues(side):
         """ Create the buffer token queues for Fixed Producer Dispatcher """
-        q_name = 'train_{}'.format(side)
-        q_names = ['{}_{}'.format(q_name, direction) for direction in ('in', 'out')]
+        q_names = ['train_{}_{}'.format(side, direction) 
+                   for direction in ('in', 'out')]
         queues = [queue_manager.get_queue(queue) for queue in q_names]
         return queues
     
@@ -56,7 +57,7 @@ class TrainingDataGenerator():
         return processed
         
     
-    def load_batches(self, mem_gen, images, side, batchsize):
+    def load_batches(self, mem_gen, images, side, batchsize=0):
         """ Load the warped images and target images to queue """
         
         def _img_iter(imgs):
@@ -81,10 +82,10 @@ class TrainingDataGenerator():
             
     def minibatch_ab(self, images, batchsize, side):
         """ Keep a queue filled to 8x Batch Size """
-        print('[TEST] minibatch_ab: batchsize: {}, side: {}'.format(batchsize, side))
         self.batchsize = batchsize
         queue_in, queue_out = self.make_queues(side)
-        training_size = self.training_opts.get("training_size", 256)        
+        training_size = self.training_opts.get("training_size", 256)     
+        
         batch_shape = list((
             (batchsize, training_size, training_size, 3),   # sample images
             (batchsize, self.model_input_size, self.model_input_size, 3),

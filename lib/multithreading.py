@@ -16,6 +16,37 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 _launched_processes = set() # pylint: disable=invalid-name
 
 
+
+class WorkerBuffer():
+    """ Memory buffer for working """
+    def __init__(self, index, data, stop_event, queue):
+        logger.trace("Initializing %s: (index: '%s', data: %s, stop_event: %s, queue: %s)",
+                     self.__class__.__name__, index, data, stop_event, queue)
+        self._id = index
+        self._data = data
+        self._stop_event = stop_event
+        self._queue = queue
+        logger.trace("Initialized %s", self.__class__.__name__)
+
+    def get(self):
+        """ Return Data """
+        return self._data
+
+    def ready(self):
+        """ Worker Ready """
+        if self._stop_event.is_set():
+            return
+        self._queue.put(self._id)
+
+    def __enter__(self):
+        """ On Enter """
+        return self.get()
+
+    def __exit__(self, *args):
+        """ On Exit """
+        self.ready()
+
+
 class FixedProducerDispatcher():
     """
     Runs the given method in N subprocesses
