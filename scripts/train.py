@@ -83,8 +83,7 @@ class Train():
     def _run_training_cycle(self, model, trainer):
         for iteration in range(self.iterations):
             logger.info('Training iteration: %s', iteration)
-            print('[TEST] Training iteration: {}'.format(iteration))
-            trainer.train_one_step()                                 # here: Start here.
+            trainer.train_one_step()
             
         model.save_models()
         

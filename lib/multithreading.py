@@ -17,16 +17,43 @@ _launched_processes = set() # pylint: disable=invalid-name
 
 
 
+class ConsumerBuffer():
+    """ Memory buffer for consuming """
+    def __init__(self, dispatcher, index, data):
+        logger.debug("Initializing %s: (dispatcher: '%s', index: %s, data: %s)",
+                     self.__class__.__name__, dispatcher, index, data)
+        self._data = data
+        self._id = index
+        self._dispatcher = dispatcher
+        logger.debug("Initialized %s", self.__class__.__name__)
+
+    def get(self):
+        """ Return Data """
+        return self._data
+
+    def free(self):
+        """ Return Free """
+        self._dispatcher.free(self._id)
+
+    def __enter__(self):
+        """ On Enter """
+        return self.get()
+
+    def __exit__(self, *args):
+        """ On Exit """
+        self.free()
+
+
 class WorkerBuffer():
     """ Memory buffer for working """
     def __init__(self, index, data, stop_event, queue):
-        logger.trace("Initializing %s: (index: '%s', data: %s, stop_event: %s, queue: %s)",
+        logger.debug("Initializing %s: (index: '%s', data: %s, stop_event: %s, queue: %s)",
                      self.__class__.__name__, index, data, stop_event, queue)
         self._id = index
         self._data = data
         self._stop_event = stop_event
         self._queue = queue
-        logger.trace("Initialized %s", self.__class__.__name__)
+        logger.debug("Initialized %s", self.__class__.__name__)
 
     def get(self):
         """ Return Data """
@@ -133,6 +160,7 @@ class FixedProducerDispatcher():
 
     def _create_worker(self, kwargs):
         """ Create Worker """
+        logger.debug('Create worker: kwargs: [{}]'.format(kwargs))
         return self.CTX.Process(target=self._runner, kwargs=kwargs)
 
     def free(self, index):
@@ -160,6 +188,7 @@ class FixedProducerDispatcher():
         with context is left. If you plan to hold on to it after that make a copy.
         This method is thread safe.
         """
+        logger.debug('FixedProducerDispatcher next (block: {}, timeout: {})'.format(block, timeout))
         if self._stop_event.is_set():
             raise StopIteration
         i = self._result_tokens.get(block=block, timeout=timeout)
@@ -173,6 +202,7 @@ class FixedProducerDispatcher():
     def start(self):
         """ Start Workers """
         for process in self._worker:
+            logger.debug('[TEST] self._worker process: {}'.format(process))
             process.start()
         _launched_processes.add(self)
 
@@ -229,6 +259,7 @@ class FixedProducerDispatcher():
         try:
             target(*args, **kwargs)
         except Exception as ex:
+            print('Running worker is failed: {}'.format(ex))
             logger.exception(ex)
             stop_event.set()
         result_tokens.put(None)

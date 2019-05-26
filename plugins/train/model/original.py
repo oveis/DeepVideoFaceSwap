@@ -29,14 +29,12 @@ class Model(ModelBase):
         
         for side in ('a', 'b'):
             decoder = self.networks['decoder_{}'.format(side)].network
-            print('[TEST] side: {}, input shape: {}'.format(side, inputs[0].shape))
             output = decoder(self.networks['encoder'].network(inputs[0]))
             autoencoder = KerasModel(inputs, output)
             self.add_predictor(side, autoencoder)
             
                 
     def encoder(self):
-        print('[TEST] model: input_shape: {}'.format(self.input_shape))
         input_ = Input(shape=self.input_shape)
         var_x = input_
         var_x = self.blocks.conv(var_x, 128)
