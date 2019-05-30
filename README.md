@@ -1,7 +1,7 @@
 # How To setup and run the project
 
 ## Setup
-`pip3 install -r requirements.txt`
+`pip install -r requirements.txt`
 
 ## Collect data
 `python3 faceswap.py preprocess --celebrity 'george clooney' --output-dir 'dataset' --limit 10`

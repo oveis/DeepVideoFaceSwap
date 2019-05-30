@@ -4,9 +4,8 @@
 import logging
 import cv2
 import numpy as np
+from random import shuffle
 
-from lib.multithreading import FixedProducerDispatcher
-from lib.queue_manager import queue_manager
 from lib.umeyama import umeyama
 
 
@@ -27,29 +26,7 @@ class TrainingDataGenerator():
         logger.debug("Initialized %s", self.__class__.__name__)
         
         
-    @staticmethod
-    def minibatch(side, load_process):
-        """ A generator function that yield epoch, batchsize of warped_img
-            and batchsize of target_img from the load queue """
-        logger.debug("Launching minibatch generator for queue (side: '%s')", side)
-        for batch_wrapper in load_process:
-            with batch_wrapper as batch:
-                yield batch
-                
-        load_process.stop()
-        load_process.join()
-            
-
-    @staticmethod
-    def make_queues(side):
-        """ Create the buffer token queues for Fixed Producer Dispatcher """
-        q_names = ['train_{}_{}'.format(side, direction) 
-                   for direction in ('in', 'out')]
-        queues = [queue_manager.get_queue(queue) for queue in q_names]
-        return queues
-    
-            
-    def process_face(self, filename, side):
+    def process_face(self, filename):
         """ Load an image and perform transformation and warping """
 
         image = cv2.imread(filename)
@@ -65,51 +42,27 @@ class TrainingDataGenerator():
         return processed
         
     
-    def load_batches(self, mem_gen, images, side, batchsize=0):
-        """ Load the warped images and target images to queue """
-        logger.debug("Loading batch: (image_count: %s, side: '%s')", len(images), side)
-        
-        def _img_iter(imgs):
-            while True:
-                for img in imgs:
-                    yield img
-                    
-        img_iter = _img_iter(images)
-        epoch = 0
-        for memory_wrapper in mem_gen:
-            memory = memory_wrapper.get()
-            
-            for i, img_path in enumerate(img_iter):
-                imgs = self.process_face(img_path, side)
-                for j, img in enumerate(imgs):
-                    memory[j][i][:] = img
-                epoch += 1
-                if i == batchsize - 1:
-                    break
-            memory_wrapper.ready()
-        
-            
+    # A generator function that yields epoch, batchsize of warped_img and batchsize of target_img
+    def minibatch(self, data, batchsize):
+        length = len(data)
+        assert length >= batchsize, "Number of images is lower than batch-size (Note that too few images may lead to bad training). # images: {}, batch-size: {}".format(length, batchsize)
+        epoch = i = 0
+        shuffle(data)
+        while True:
+            size = batchsize
+            if i+size > length:
+                shuffle(data)
+                i = 0
+                epoch+=1
+            rtn = np.float32([self.process_face(img) for img in data[i:i+size]])
+            i+=size
+            yield epoch, rtn[:,0,:,:,:], rtn[:,1,:,:,:]
+
+
     def minibatch_ab(self, images, batchsize, side):
-        """ Keep a queue filled to 8x Batch Size """
-        logger.debug("Queue batches: (image_count: %s, batchsize: %s, side: '%s'", len(images), batchsize, side)
-        self.batchsize = batchsize
-        queue_in, queue_out = self.make_queues(side)
-        training_size = self.training_opts.get("training_size", 256)     
-        
-        batch_shape = list((
-            (batchsize, training_size, training_size, 3),   # sample images
-            (batchsize, self.model_input_size, self.model_input_size, 3),
-            (batchsize, self.model_output_size, self.model_output_size, 3)))
-        
-        load_process = FixedProducerDispatcher(
-            method=self.load_batches,
-            shapes=batch_shape,
-            in_queue=queue_in,
-            out_queue=queue_out,
-            args=(images, side, batchsize))
-        
-        load_process.start()
-        return self.minibatch(side, load_process)
+        batch = BackgroundGenerator(self.minibatch(images, batchsize), 1)
+        for ep1, warped_img, target_img in batch.iterator():
+            yield ep1, warped_img, target_img
 
 
 class ImageManipulation():
@@ -318,3 +271,29 @@ class ImageManipulation():
         logger.debug("Target mask shape: %s", target_mask.shape)
         logger.debug("Randomly warped image and mask")
         return [warped_image, target_image, target_mask]
+
+
+# From: https://stackoverflow.com/questions/7323664/python-generator-pre-fetch
+import threading
+import queue as Queue
+class BackgroundGenerator(threading.Thread):
+    def __init__(self, generator, prefetch=1): #See below why prefetch count is flawed
+        threading.Thread.__init__(self)
+        self.queue = Queue.Queue(prefetch)
+        self.generator = generator
+        self.daemon = True
+        self.start()
+
+    def run(self):
+        # Put until queue size is reached. Note: put blocks only if put is called while queue has already reached max size
+        # => this makes 2 prefetched items! One in the queue, one waiting for insertion!
+        for item in self.generator:
+            self.queue.put(item)
+        self.queue.put(None)
+
+    def iterator(self):
+        while True:
+            next_item = self.queue.get()
+            if next_item is None:
+                break
+            yield next_item
