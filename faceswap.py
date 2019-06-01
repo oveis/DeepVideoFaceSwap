@@ -3,6 +3,7 @@
 import argparse
 import logging
 
+from scripts.convert import Convert
 from scripts.data_collector import FaceImageCollector
 from scripts.train import Train
 
@@ -23,14 +24,18 @@ class DeepVideoFaceSwap:
             train.process()
         except KeyboardInterrupt:
             raise
-        except SystemExit:
-            pass
         except Exception:
             logger.exception('Got Exception on train process')
     
     
-    def convert(self):
-        raise NotImplementedError()
+    def convert(self, input_video, output_dir):
+        try:
+            convert = Convert(input_video, output_dir)
+            convert.process()
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            logger.exception('Got Exception on convert process')
 
 
 def set_log_level(log_level):
@@ -66,6 +71,8 @@ if __name__ == '__main__':
     parser.add_argument('--num-gpu', type=int, default=1)
     
     # Convert arguments
+    parser.add_argument('--input-video', help="Source video path")
+    parser.add_argument('--output-dir', help='Directory to save output result')
     
     args = parser.parse_args()
     
@@ -78,4 +85,4 @@ if __name__ == '__main__':
         face_swap.train(args.trainer_name, args.batch_size, args.iterations, args.input_A, args.input_B,
                        args.model_dir, args.num_gpu)
     elif args.task == 'convert':
-        face_swap.convert()
+        face_swap.convert(args.input_video, args.output_dir)

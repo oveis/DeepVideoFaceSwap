@@ -21,6 +21,12 @@ class PluginLoader():
     
     
     @staticmethod
+    def get_converter(category, name):
+        """ Return the converter sub plugin """
+        return PluginLoader._import('convert.{}'.format(category), name)
+    
+    
+    @staticmethod
     def _import(attr, name):
         """ Import the plugin's module """
         name = name.replace('-', '_')
