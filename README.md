@@ -8,3 +8,6 @@
 
 ## Train
 `python3 faceswap.py train --trainer-name 'original' --batch-size 10 --iterations 10 --input-A 'dataset/faces/george clooney/frontal' --input-B 'dataset/faces/barack obama/frontal' --model-dir 'dataset/models' --num-gpu 1 --log 'debug'`
+
+## Convert
+`python3 faceswap.py convert --input-video 'dataset/videos/chi_1.mov' --output-dir 'dataset/outputs' --model-dir 'dataset/models' --trainer-name'original' --num-gpu 1 --log 'debug'`

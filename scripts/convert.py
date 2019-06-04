@@ -5,8 +5,10 @@ import logging
 import multiprocessing as mp
 
 from lib.convert import Converter
+from lib.queue_manager import queue_manager
 from lib.utils import get_folder
 from multiprocessing import Pool
+from plugins.plugin_loader import PluginLoader
 from scripts.fsmedia import Images
 from tqdm import tqdm
 
@@ -20,19 +22,27 @@ PATCH_QUEUE = 'patch'
 
 class Convert():
     """ The convert process """
-    def __init__(self, input_video, output_dir):
+    def __init__(self, input_video, output_dir, model_dir, trainer_name, mask_type, num_gpu):
         logger.debug("Initialized %s", self.__class__.__name__)
         self.add_queues()
         
         self.images = Images(input_video)
+        
+        self.load_queue = queue_manager.get_queue(CONVERT_IN_QUEUE)
+        self.save_queue = queue_manager.get_queue(CONVERT_OUT_QUEUE)
+        self.patch_queue = queue_manager.get_queue(PATCH_QUEUE)
+        
         self.disk_io = DiskIO(self.images,
-                              queue_manager.get_queue(CONVERT_IN_QUEUE),
-                              queue_manager.get_queue(CONVERT_OUT_QUEUE),
+                              self.load_queue,
+                              self.save_queue,
                               output_dir, 
                               input_video)
-        self.predictor = Predict()            # TODO
+
+        self.predictor = Predict(self.load_queue, self.patch_queue, self.queue_size,
+                                 model_dir, trainer_name, num_gpu)
         self.converter = Converter(get_folder(output_dir),
-                                   self.predictor.output_size)
+                                   self.predictor.output_size,
+                                   mask_type)
     
     
     @property
@@ -54,12 +64,10 @@ class Convert():
         
     def convert_images(self):
         """ Convert the images """
-        save_queue = queue_manager.get_queue(CONVERT_OUT_QUEUE)
-        patch_queue = queue_manager.get_queue(PATCH_QUEUE)
-        save_queue.put('EOF')
+        self.save_queue.put('EOF')
 
         pool = Pool(processes=self.get_processes())
-        pool.apply_async(self.converter.process, args=[patch_queue, save_queue])
+        pool.apply_async(self.converter.process, args=[self.patch_queue, self.save_queue])
         
         pool.close()
         pool.join()
@@ -75,13 +83,14 @@ class Convert():
         logger.debug('Completed Conversion')
         
 
+        
 class DiskIO():
     """ Load images from disk and get the detected faces
         Save images back to disk """
-    def __init__(self, images, convert_in_queue, convert_out_queue, output_dir, input_video):
+    def __init__(self, images, load_queue, save_queue, output_dir, input_video):
         self.images = images
-        self.load_queue = convert_in_queue
-        self.save_queue = convert_out_queue
+        self.load_queue = load_queue
+        self.save_queue = save_queue
         self.output_dir = output_dir
         self.input_video = input_video
         self.writer = self.get_writer()
@@ -131,15 +140,29 @@ class DiskIO():
                      
         
         
-        
 class Predict():
     """ Predict faces from incoming queue """
-    def __init__(self, in_queue, queue_size):
+    def __init__(self, in_queue, out_queue, queue_size, model_dir, trainer_name, num_gpu):
         self.batchsize = min(queue_size, 16)
         self.in_queue = in_queue
         self.out_queue = queue_manager
-        logger.deubug("Inpitialized %s: (out_queue: %s)", self.__class__.__name__, self.out_queue)
+        self.model = self.load_model(model_dir, trainer_name, num_gpu)
+        logger.debug("Inpitialized %s: (out_queue: %s)", self.__class__.__name__, self.out_queue)
         
-        
+    
+    @property
+    def output_size(self):
+        """ Return the model output size """
+        return self.model.output_shape[0]
+    
+    
+    def load_model(self, model_dir, trainer_name, num_gpu):
+        """ Load the model requested for conversion """
+        model_dir_path = get_folder(model_dir, make_folder=False)
+        model = PluginLoader.get_model(trainer_name)(model_dir_path, num_gpu, predict=True)
+        return model
+    
+    
+       
     
         

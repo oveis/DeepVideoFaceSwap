@@ -1,4 +1,8 @@
 opencv-python
 google_images_download
+tqdm
+imageio
+imageio_ffmpeg
+ffmpy
 keras
 tensorflow

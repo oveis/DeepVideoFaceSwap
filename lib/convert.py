@@ -2,13 +2,16 @@
 """ Converter for faceswap.py """
 
 import logging
+import numpy as np
+
+from plugins.plugin_loader import PluginLoader
 
 logger = logging.getLogger(__name__)
 
 
 class Converter():
     """ Swap a source face with a target """
-    def __init__(self, output_dir, output_size, mask_type)
+    def __init__(self, output_dir, output_size, mask_type):
         self.output_dir = output_dir
         self.scale = 1
         self.adjustments = dict(box=None, mask=None)
@@ -24,7 +27,8 @@ class Converter():
         
         self.adjustments['mask'] = PluginLoader.get_converter('mask', 'mask_blend')(
             mask_type,
-            output_size)
+            output_size,
+            False)
         
         logger.debug('Loaded plugins: {}'.format(self.adjustments))
 

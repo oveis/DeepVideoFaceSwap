@@ -239,7 +239,9 @@ class NNMeta():
             # Jinil note:
             # The original code(https://github.com/deepfakes/faceswap/blob/master/plugins/train/model/_base.py#L557)
             # uses 'self.filename' instead of 'fullpath', but I think it's a bug. 
+            print('[TEST] fullpath: {}'.format(fullpath))
             network = load_model(fullpath, custom_objects=get_custom_objects())
+#             network = load_model(self.filename, custom_objects=get_custom_objects())
         except Exception:
             logger.exception('Failed to load existing training data')
             return False

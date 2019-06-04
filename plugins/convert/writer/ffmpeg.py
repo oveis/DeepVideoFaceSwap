@@ -140,4 +140,4 @@ class Writer(Output):
         logger.debug("Executing: %s", ffm.cmd)
         ffm.run()
         logger.debug("Removing temp file")
-os.remove(self.video_tmp_file)
+        os.remove(self.video_tmp_file)

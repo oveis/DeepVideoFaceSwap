@@ -28,9 +28,9 @@ class DeepVideoFaceSwap:
             logger.exception('Got Exception on train process')
     
     
-    def convert(self, input_video, output_dir):
+    def convert(self, input_video, output_dir, model_dir, trainer_name, mask_type, num_gpu):
         try:
-            convert = Convert(input_video, output_dir)
+            convert = Convert(input_video, output_dir, model_dir, trainer_name, mask_type, num_gpu)
             convert.process()
         except KeyboardInterrupt:
             raise
@@ -54,26 +54,30 @@ def set_log_level(log_level):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('task', choices=['preprocess', 'train', 'convert'])
-    parser.add_argument('--log', choices=['error', 'warning', 'info', 'debug'], default='error')
     
     # Preprocess arguments
     parser.add_argument('--celebrity', default=None)
-    parser.add_argument('--output-dir', default='dataset')
     parser.add_argument('--limit', type=int, default=100)
     
     # Train arguments
-    parser.add_argument('--trainer-name', default='original')
     parser.add_argument('--batch-size', type=int, default=10)
     parser.add_argument('--iterations', type=int, default=10)
     parser.add_argument('--input-A', help="Person A's face image dataset to train")
     parser.add_argument('--input-B', help="Person B's face image dataset to train")
-    parser.add_argument('--model-dir', help="Model directory where the training data will be stored")
-    parser.add_argument('--num-gpu', type=int, default=1)
-    
+        
     # Convert arguments
     parser.add_argument('--input-video', help="Source video path")
-    parser.add_argument('--output-dir', help='Directory to save output result')
+    parser.add_argument('--mask-type', default='predicted')
     
+    # Train & Convert arguments
+    parser.add_argument('--model-dir', help="Model directory where the training data will be stored")
+    parser.add_argument('--trainer-name', default='original')
+    
+    # Optional arguments
+    parser.add_argument('--output-dir', default='dataset')
+    parser.add_argument('--num-gpu', type=int, default=1)
+    parser.add_argument('--log', choices=['error', 'warning', 'info', 'debug'], default='error')
+        
     args = parser.parse_args()
     
     face_swap = DeepVideoFaceSwap()
@@ -85,4 +89,5 @@ if __name__ == '__main__':
         face_swap.train(args.trainer_name, args.batch_size, args.iterations, args.input_A, args.input_B,
                        args.model_dir, args.num_gpu)
     elif args.task == 'convert':
-        face_swap.convert(args.input_video, args.output_dir)
+        face_swap.convert(args.input_video, args.output_dir, args.model_dir, 
+                          args.trainer_name, args.mask_type, args.num_gpu)

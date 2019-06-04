@@ -97,7 +97,7 @@ class Train():
             try:
                 logger.debug("Keyboard Interrupt Caught. Saving Weights and exiting")
                 model.save_models()
-                trainer.clear_tensorboard()
+#                 trainer.clear_tensorboard()
             except KeyboardInterrupt:
                 logger.info("Saving model weights has been cancelled!")
             exit(0)

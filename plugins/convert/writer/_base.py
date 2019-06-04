@@ -5,14 +5,14 @@ import logging
 import os
 import re
 
-from plugins.convert._config import Config
+# from plugins.convert._config import Config
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def get_config(plugin_name):
-    """ Return the config for the requested model """
-    return Config(plugin_name).config_dict
+# def get_config(plugin_name):
+#     """ Return the config for the requested model """
+#     return Config(plugin_name).config_dict
 
 
 class Output():
@@ -20,8 +20,8 @@ class Output():
     def __init__(self, output_folder):
         logger.debug("Initializing %s: (output_folder: '%s')",
                      self.__class__.__name__, output_folder)
-        self.config = get_config(".".join(self.__module__.split(".")[-2:]))
-        logger.debug("config: %s", self.config)
+#         self.config = get_config(".".join(self.__module__.split(".")[-2:]))
+#         logger.debug("config: %s", self.config)
         self.output_folder = output_folder
         self.output_dimensions = None
 
@@ -35,7 +35,8 @@ class Output():
             NB: The plugin must have a config item 'format' that contains the
                 file extension to use this method """
         filename = os.path.splitext(os.path.basename(filename))[0]
-        out_filename = "{}.{}".format(filename, self.config["format"])
+#         out_filename = "{}.{}".format(filename, self.config["format"])
+        out_filename = "{}.png".format(filename)
         out_filename = os.path.join(self.output_folder, out_filename)
         logger.trace("in filename: '%s', out filename: '%s'", filename, out_filename)
         return out_filename
@@ -57,4 +58,4 @@ class Output():
 
     def close(self):
         """ Override for specific frame writing close methods """
-raise NotImplementedError
+        raise NotImplementedError
