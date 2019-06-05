@@ -14,27 +14,37 @@ PROFILE_FACE_CASCADE = cv.CascadeClassifier('scripts/haarcascades/haarcascade_pr
 class FaceImageCollector():
     """ Face photo collector """        
     
-    def collect(self, keywords, output_dir, limit=50, face_img_shape=(64, 64)):
+    # chrome driver need to be referenced for downloading more than 100 images. 
+    # https://sites.google.com/a/chromium.org/chromedriver/downloads
+    def collect(self, keywords, output_dir, limit=50, face_img_shape=(64, 64), driver_path=""):
         self.face_img_shape = face_img_shape
         images_dir = join(output_dir, 'images')
         faces_dir = join(output_dir, 'faces')
 
         # Images are downloaded in 'images_dir/<keywords>'.
-        self._download_images_from_google(keywords, images_dir, limit)
+        self._download_images_from_google(keywords, images_dir, limit, driver_path)
         
         # Extract faces from images.
         self._detect_and_save_faces(join(images_dir, keywords), join(faces_dir, keywords))
         
-        
-    def _download_images_from_google(self, keywords, output_dir, limit):
-        self._check_dir_path(output_dir)
-            
+    # Examples: https://google-images-download.readthedocs.io/en/latest/examples.html
+    # Argument: https://google-images-download.readthedocs.io/en/latest/arguments.html
+    def _download_images_from_google(self, keywords, limit, output_dir, driver_path):
         downloader = gid.googleimagesdownload()
-        downloader.download({
-            'keywords': keywords,
-            "limit": limit,
-            'output_directory': output_dir
-        })
+
+        if limit >= 100:
+            downloader.download({
+                'keywords': keywords,
+                "limit": limit,
+                'chromedriver': driver_path,
+                'output_directory': output_dir
+            })
+        else:
+            downloader.download({
+                'keywords': keywords,
+                "limit": limit,
+                'output_directory': output_dir
+            })
 
 
     def _save_faces(self, img, faces, output_dir, file_id):
