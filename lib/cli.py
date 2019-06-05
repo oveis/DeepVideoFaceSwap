@@ -416,7 +416,7 @@ class ExtractConvertArgs(FaceSwapArgs):
                               "action": DirOrFileFullPaths,
                               "filetypes": "video",
                               "dest": "input_dir",
-                              "required": True,
+#                               "required": True,
                               "help": "Input directory or video. Either a directory containing "
                                       "the image files you wish to process or path to a video "
                                       "file. NB: This should be the source video/frames NOT the "
@@ -468,6 +468,36 @@ class ExtractConvertArgs(FaceSwapArgs):
         return argument_list
 
 
+class CollectArgs(ExtractConvertArgs):
+    """ Class to parse the command line arguments for collect-data.
+        Inherits base options from ExtractConvertArgs where arguments
+        that are used for both extract and convert should be placed """
+    
+    @staticmethod
+    def get_optional_arguments():
+        """ Put the arguments in a list so that they are accessible from both
+        argparse and gui """
+        argument_list = []
+        argument_list.append({"opts": ("-k", "--keywords"),
+                              "dest": "keywords",
+                              "required": True,
+                              "help": "Keywords to search in internet"})
+        argument_list.append({"opts": ("--limit", ),
+                              "action": Slider,
+                              "type": int,
+                              "min_max": (10, 5000),
+                              "dest": "limit",
+                              "default": 100,
+                              "help": "Number of images to download from internet"})
+        argument_list.append({"opts": ("-dp", "--driver-path"),
+                              "action": DirOrFileFullPaths,
+                              "dest": "driver_path",
+                              "default": 'chromedriver',
+                              "help": "Chromedriver path"})
+        
+        return argument_list
+    
+    
 class ExtractArgs(ExtractConvertArgs):
     """ Class to parse the command line arguments for extraction.
         Inherits base options from ExtractConvertArgs where arguments

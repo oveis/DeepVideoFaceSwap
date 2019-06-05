@@ -3,3 +3,11 @@ dataset/
 *__pycache__
 *.log
 *.pyc
+*.ini
+faceswap.log*
+output/
+*.pb
+*.npy
+*.ipynb
+download/
+chromedriver

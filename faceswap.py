@@ -19,6 +19,9 @@ def bad_args(args):
 if __name__ == "__main__":
     PARSER = cli.FullHelpArgumentParser()
     SUBPARSER = PARSER.add_subparsers()
+    COLLECT = cli.CollectArgs(SUBPARSER,
+                              "collect",
+                              "Download face images from internet")
     EXTRACT = cli.ExtractArgs(SUBPARSER,
                               "extract",
                               "Extract the faces from pictures")
