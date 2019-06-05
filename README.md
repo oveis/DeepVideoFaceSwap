@@ -3,7 +3,13 @@
 ## Setup
 `pip install -r requirements.txt`
 
-## Collect Images from internet
+## Prepare dataset
+There are 2 ways to prepare dataset; `Download images from google` or `Download pre-collected images from S3`
+
+### Download from S3
+`cd ~/DeepVideoFaceSwap && mkdir download && aws s3 cp --recursive s3://faceswap-dataset ./download`
+
+### Download from google
 `python faceswap.py collect -o "download" -k "george_clooney" --limit 100`
 
 If you want to download images more than 100, you need to install Chrome. Follow this:
