@@ -16,7 +16,7 @@ class FaceImageCollector():
     
     # chrome driver need to be referenced for downloading more than 100 images. 
     # https://sites.google.com/a/chromium.org/chromedriver/downloads
-    def collect(self, keywords, output_dir, limit=50, face_img_shape=(64, 64), driver_path=""):
+    def collect(self, keywords, output_dir, limit=50, face_img_shape=(64, 64), extract_face=False, driver_path=""):
         self.face_img_shape = face_img_shape
         images_dir = join(output_dir, 'images')
         faces_dir = join(output_dir, 'faces')
@@ -25,7 +25,8 @@ class FaceImageCollector():
         self._download_images_from_google(keywords, images_dir, limit, driver_path)
         
         # Extract faces from images.
-        self._detect_and_save_faces(join(images_dir, keywords), join(faces_dir, keywords))
+        if extract_face:
+            self._detect_and_save_faces(join(images_dir, keywords), join(faces_dir, keywords))
         
     # Examples: https://google-images-download.readthedocs.io/en/latest/examples.html
     # Argument: https://google-images-download.readthedocs.io/en/latest/arguments.html
