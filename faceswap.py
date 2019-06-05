@@ -1,81 +1,36 @@
 #!/usr/bin/env python3
+""" The master faceswap.py script """
+import sys
 
-import argparse
-import logging
+import lib.cli as cli
 
-from scripts.data_collector import FaceImageCollector
-from scripts.train import Train
-
-logger = logging.getLogger(__name__)
-
-
-class DeepVideoFaceSwap:
-    """ Deep Video Face Swap """
-    
-    def preprocess(self, celebrity, output_dir, limit):
-        collector = FaceImageCollector()
-        collector.collect(celebrity, output_dir, limit)
-        
-
-    def train(self, trainer_name, batch_size, iterations, input_a, input_b, model_dir, num_gpu):
-        try:
-            train = Train(trainer_name, batch_size, iterations, input_a, input_b, model_dir, num_gpu)
-            train.process()
-        except KeyboardInterrupt:
-            raise
-        except SystemExit:
-            pass
-        except Exception:
-            logger.exception('Got Exception on train process')
-    
-    
-    def convert(self):
-        raise NotImplementedError()
+if sys.version_info[0] < 3:
+    raise Exception("This program requires at least python3.2")
+if sys.version_info[0] == 3 and sys.version_info[1] < 2:
+    raise Exception("This program requires at least python3.2")
 
 
-def set_log_level(log_level):
-    if (log_level == 'warning'):
-        level = logging.WARNING
-    elif (log_level == 'info'):
-        level = logging.INFO
-    elif (log_level == 'debug'):
-        level = logging.DEBUG
-    else:
-        level = logging.ERROR
+def bad_args(args):
+    """ Print help on bad arguments """
+    PARSER.print_help()
+    exit(0)
 
-    logging.basicConfig(filename='log_{}.log'.format(log_level), level=level)
-    
-    
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('task', choices=['preprocess', 'train', 'convert'])
-    parser.add_argument('--log', choices=['error', 'warning', 'info', 'debug'], default='error')
-    
-    # Preprocess arguments
-    parser.add_argument('--celebrity', default=None)
-    parser.add_argument('--output-dir', default='dataset')
-    parser.add_argument('--limit', type=int, default=100)
-    
-    # Train arguments
-    parser.add_argument('--trainer-name', default='original')
-    parser.add_argument('--batch-size', type=int, default=10)
-    parser.add_argument('--iterations', type=int, default=10)
-    parser.add_argument('--input-A', help="Person A's face image dataset to train")
-    parser.add_argument('--input-B', help="Person B's face image dataset to train")
-    parser.add_argument('--model-dir', help="Model directory where the training data will be stored")
-    parser.add_argument('--num-gpu', type=int, default=1)
-    
-    # Convert arguments
-    
-    args = parser.parse_args()
-    
-    face_swap = DeepVideoFaceSwap()
-    set_log_level(args.log)
-    
-    if args.task == 'preprocess':
-        face_swap.preprocess(args.celebrity, args.output_dir, args.limit)
-    elif args.task == 'train':
-        face_swap.train(args.trainer_name, args.batch_size, args.iterations, args.input_A, args.input_B,
-                       args.model_dir, args.num_gpu)
-    elif args.task == 'convert':
-        face_swap.convert()
+
+if __name__ == "__main__":
+    PARSER = cli.FullHelpArgumentParser()
+    SUBPARSER = PARSER.add_subparsers()
+    EXTRACT = cli.ExtractArgs(SUBPARSER,
+                              "extract",
+                              "Extract the faces from pictures")
+    TRAIN = cli.TrainArgs(SUBPARSER,
+                          "train",
+                          "This command trains the model for the two faces A and B")
+    CONVERT = cli.ConvertArgs(SUBPARSER,
+                              "convert",
+                              "Convert a source image to a new one with the face swapped")
+    GUI = cli.GuiArgs(SUBPARSER,
+                      "gui",
+                      "Launch the Faceswap Graphical User Interface")
+    PARSER.set_defaults(func=bad_args)
+    ARGUMENTS = PARSER.parse_args()
+    ARGUMENTS.func(ARGUMENTS)
