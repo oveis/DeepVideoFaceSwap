@@ -21,10 +21,10 @@ If you want to download images more than 100, you need to install Chrome. Follow
 
 ## Extract Faces from Images
 `python faceswap.py extract -i ./download/images/george_clooney -o ./download/images/george_clooney_out/`
-`python faceswap.py extract -i ./download/images/liu_ye -o ./download/images/liu_ye_out/`
+`python faceswap.py extract -i ./download/images/jinil_jang -o ./download/images/jinil_jang_out/`
 
 ## Train
-`python faceswap.py train -A ./download/images/george_clooney_out/ -B ./download/images/liu_ye_out/ -m ./output/model/george_liuye/`
+`python faceswap.py train -A ./download/images/george_clooney_out/ -B ./download/images/jinil_jang_out/ -m ./output/model/george_jinil/`
 
 ## Convert
-`python faceswap.py convert -i ./download/images/george_clooney/ -o ./output/converted/george/ -m ./output/model/george_liuye/`
+`python faceswap.py convert -i ./download/images/george_clooney/ -o ./output/converted/george_jinil/ -m ./output/model/george_jinil/`

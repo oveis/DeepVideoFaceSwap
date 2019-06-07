@@ -46,7 +46,8 @@ class ModelBase():
                  trainer="original",
                  pingpong=False,
                  memory_saving_gradients=False,
-                 predict=False):
+                 predict=False,
+                 is_gan=False):
         logger.debug("Initializing ModelBase (%s): (model_dir: '%s', gpus: %s, no_logs: %s"
                      "training_image_size, %s, alignments_paths: %s, preview_scale: %s, "
                      "input_shape: %s, encoder_dim: %s, trainer: %s, pingpong: %s, "
@@ -78,6 +79,7 @@ class ModelBase():
 
         self.networks = dict()  # Networks for the model
         self.predictors = dict()  # Predictors for model
+        self.adversarial_autoencoders = dict()  # Adversarial autoencoder models
         self.history = dict()  # Loss history per save iteration)
 
         # Training information specific to the model should be placed in this
@@ -89,9 +91,10 @@ class ModelBase():
                               "pingpong": pingpong}
 
         self.set_gradient_type(memory_saving_gradients)
-        self.build()
+        self.build(is_gan=self.is_gan)
         self.set_training_data()
         logger.debug("Initialized ModelBase (%s)", self.__class__.__name__)
+
 
     @property
     def config_section(self):
@@ -99,6 +102,7 @@ class ModelBase():
         retval = ".".join(self.__module__.split(".")[-2:])
         logger.debug(retval)
         return retval
+
 
     @property
     def config(self):
@@ -110,11 +114,13 @@ class ModelBase():
             _CONFIG = Config(model_name).config_dict
         return _CONFIG
 
+
     @property
     def config_changeable_items(self):
         """ Return the dict of config items that can be updated after the model
             has been created """
         return Config(self.config_section).changeable_items
+
 
     @property
     def name(self):
@@ -124,12 +130,14 @@ class ModelBase():
         logger.debug("model name: '%s'", retval)
         return retval
 
+
     @property
     def models_exist(self):
         """ Return if all files exist and clear session """
         retval = all([os.path.isfile(model.filename) for model in self.networks.values()])
         logger.debug("Pre-existing models exist: %s", retval)
         return retval
+
 
     @staticmethod
     def set_gradient_type(memory_saving_gradients):
@@ -139,6 +147,7 @@ class ModelBase():
         logger.info("Using Memory Saving Gradients")
         from lib.model import memory_saving_gradients
         K.__dict__["gradients"] = memory_saving_gradients.gradients_memory
+
 
     def set_training_data(self):
         """ Override to set model specific training data.
@@ -152,6 +161,7 @@ class ModelBase():
         self.training_opts["preview_images"] = 14
         logger.debug("Set training data: %s", self.training_opts)
 
+
     def calculate_coverage_ratio(self):
         """ Coverage must be a ratio, leading to a cropped shape divisible by 2 """
         coverage_ratio = self.config.get("coverage", 62.5) / 100
@@ -161,13 +171,19 @@ class ModelBase():
         logger.debug("Final coverage_ratio: %s", coverage_ratio)
         return coverage_ratio
 
-    def build(self):
+
+    def build(self, is_gan=False):
         """ Build the model. Override for custom build methods """
         self.add_networks()
         self.load_models(swapped=False)
         self.build_autoencoders()
         self.log_summary()
         self.compile_predictors(initialize=True)
+        if is_gan:
+            self.compile_discriminators()
+            self.build_adversarial_autoencoders()
+            self.compile_adversarial_autoencoders()
+
 
     def build_autoencoders(self):
         """ Override for Model Specific autoencoder builds
@@ -180,9 +196,11 @@ class ModelBase():
         """
         raise NotImplementedError
 
+
     def add_networks(self):
         """ Override to add neural networks """
         raise NotImplementedError
+
 
     def load_state_info(self):
         """ Load the input shape from state file if it exists """
@@ -198,6 +216,7 @@ class ModelBase():
         logger.debug("Setting input shape from state file: %s", input_shape)
         self.input_shape = input_shape
 
+
     def add_network(self, network_type, side, network):
         """ Add a NNMeta object """
         logger.debug("network_type: '%s', side: '%s', network: '%s'", network_type, side, network)
@@ -211,6 +230,7 @@ class ModelBase():
         logger.debug("name: '%s', filename: '%s'", name, filename)
         self.networks[name] = NNMeta(str(self.model_dir / filename), network_type, side, network)
 
+
     def add_predictor(self, side, model):
         """ Add a predictor to the predictors dictionary """
         logger.debug("Adding predictor: (side: '%s', model: %s)", side, model)
@@ -223,6 +243,16 @@ class ModelBase():
         if not self.output_shape:
             self.set_output_shape(model)
 
+            
+    def add_adversarial_autoencoder(self, side, model):
+        """ Add a adversarial auoencoder """
+        logger.debug("Adding adversarial autoencoder: (side: '%s', model: %s)", side, model)
+        if self.gpus > 1:
+            logger.debug("Converting to multi-gpu: side %s", side)
+            model = multi_gpu_model(model, self.gpus)
+        self.adversarial_autoencoders[side] = model
+            
+
     def store_input_shapes(self, model):
         """ Store the input and output shapes to state """
         logger.debug("Adding input shapes to state for model")
@@ -233,6 +263,7 @@ class ModelBase():
         self.state.inputs = inputs
         logger.debug("Added input shapes: %s", self.state.inputs)
 
+
     def set_output_shape(self, model):
         """ Set the output shape for use in training and convert """
         logger.debug("Setting output shape")
@@ -242,12 +273,14 @@ class ModelBase():
         self.output_shape = tuple(out[0])
         logger.debug("Added output shape: %s", self.output_shape)
 
+
     def reset_pingpong(self):
         """ Reset the models for pingpong training """
         logger.debug("Resetting models")
 
         # Clear models and graph
         self.predictors = dict()
+        self.adversarial_autoencoders = dict()
         K.clear_session()
 
         # Load Models for current training run
@@ -258,6 +291,7 @@ class ModelBase():
         self.build_autoencoders()
         self.compile_predictors(initialize=False)
         logger.debug("Reset models")
+
 
     def compile_predictors(self, initialize=True):
         """ Compile the predictors """
@@ -281,6 +315,33 @@ class ModelBase():
                 self.history[side] = list()
         logger.debug("Compiled Predictors. Losses: %s", loss_names)
 
+
+    def compile_discriminators(self):
+        """ Compile the discriminators """
+        logger.debug("Compiling Discriminators")
+        learning_rate = self.config.get("learning_rate", 5e-5)
+        optimizer = self.get_optimizer(lr=learning_rate, beta_1=0.5, beta_2=0.999)
+        
+        for side in ("a", "b"):
+            model = self.networks["discriminator_{}".format(side)]
+            model.compile(optimizer=optimizer, loss='mse', metrics=['accuracy']))
+            
+        logger.debug("Compiled Discriminators.")
+
+
+    def compile_adversarial_autoencoders(self):
+        """ Compile the adversarial autoencoders """
+        logger.debug("Compiling Adversarial Autoencoders")
+        optimizer = self.get_optimizer(lr=learning_rate, beta_1=0.5, beta_2=0.999)
+        
+        for side, model in self.adversarial_autoencoders.items():
+            model.compile(loss=['mae', 'mse'],
+                          loss_weights=[1, 0.5],
+                          optimizer=optimizer)
+        
+        logger.debug("Compiled Adversarial Autoencoders")
+
+
     def get_optimizer(self, lr=5e-5, beta_1=0.5, beta_2=0.999):  # pylint: disable=invalid-name
         """ Build and return Optimizer """
         opt_kwargs = dict(lr=lr, beta_1=beta_1, beta_2=beta_2)
@@ -295,6 +356,7 @@ class ModelBase():
             opt_kwargs["clipnorm"] = 1.0
         logger.debug("Optimizer kwargs: %s", opt_kwargs)
         return Adam(**opt_kwargs)
+
 
     def loss_function(self, mask, side, initialize):
         """ Set the loss function
@@ -315,6 +377,7 @@ class ModelBase():
             loss_func = PenalizedLoss(loss_mask, loss_func)
         return loss_func
 
+
     def mask_loss_function(self, side, initialize):
         """ Set the mask loss function
             Side is input so we only log once """
@@ -322,6 +385,7 @@ class ModelBase():
             logger.verbose("Using Mean Squared Error Loss for mask")
         mask_loss_func = losses.mean_squared_error
         return mask_loss_func
+
 
     def converter(self, swap):
         """ Converter for autoencoder models """
@@ -337,10 +401,12 @@ class ModelBase():
         logger.debug("Got Converter: %s", retval)
         return retval
 
+
     @property
     def iterations(self):
         "Get current training iteration number"
         return self.state.iterations
+
 
     def map_models(self, swapped):
         """ Map the models for A/B side for swapping """
@@ -355,6 +421,7 @@ class ModelBase():
         logger.debug("Mapped models: (models_map: %s)", models_map)
         return models_map
 
+
     def log_summary(self):
         """ Verbose log the model summaries """
         if self.predict:
@@ -367,6 +434,7 @@ class ModelBase():
                     continue
                 logger.verbose("%s:", name.title())
                 nnmeta.network.summary(print_fn=lambda x: logger.verbose("R|%s", x))
+
 
     def load_models(self, swapped):
         """ Load models from file """
@@ -393,6 +461,7 @@ class ModelBase():
             logger.info("Loaded model from disk: '%s'", self.model_dir)
         return is_loaded
 
+
     def save_models(self, snapshot_iteration):
         """ Backup and save the models """
         logger.debug("Backing up and saving models")
@@ -415,7 +484,8 @@ class ModelBase():
         logger.info("saved models")
         if snapshot_iteration:
             self.snapshot_models()
-    
+
+
     def snapshot_models(self):
         """ Take a snapshot of the model at current state and back up """
         logger.info("Saving snapshot")
@@ -430,6 +500,7 @@ class ModelBase():
             logger.debug("Saving snapshot: '%s' > '%s'", srcfile, dstfile)
             copyfunc(srcfile, dstfile)
         logger.info("Saved snapshot")
+
 
     def get_save_averages(self):
         """ Return the loss averages since last save and reset historical losses
@@ -473,6 +544,7 @@ class ModelBase():
         logger.debug("Backing up: %s", backup)
         return backup
 
+
     def check_loss_drop(self, side, avg):
         """ Check whether total loss has dropped since lowest loss """
         if avg < self.state.lowest_avg_loss[side]:
@@ -480,6 +552,7 @@ class ModelBase():
             return True
         logger.debug("Loss for '%s' has not dropped", side)
         return False
+
 
     def rename_legacy(self):
         """ Legacy Original, LowMem and IAE models had inconsistent naming conventions
