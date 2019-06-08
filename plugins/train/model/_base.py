@@ -46,8 +46,7 @@ class ModelBase():
                  trainer="original",
                  pingpong=False,
                  memory_saving_gradients=False,
-                 predict=False,
-                 is_gan=False):
+                 predict=False):
         logger.debug("Initializing ModelBase (%s): (model_dir: '%s', gpus: %s, no_logs: %s"
                      "training_image_size, %s, alignments_paths: %s, preview_scale: %s, "
                      "input_shape: %s, encoder_dim: %s, trainer: %s, pingpong: %s, "
@@ -79,7 +78,7 @@ class ModelBase():
 
         self.networks = dict()  # Networks for the model
         self.predictors = dict()  # Predictors for model
-        self.adversarial_autoencoders = dict()  # Adversarial autoencoder models
+
         self.history = dict()  # Loss history per save iteration)
 
         # Training information specific to the model should be placed in this
@@ -91,7 +90,7 @@ class ModelBase():
                               "pingpong": pingpong}
 
         self.set_gradient_type(memory_saving_gradients)
-        self.build(is_gan=self.is_gan)
+        self.build()
         self.set_training_data()
         logger.debug("Initialized ModelBase (%s)", self.__class__.__name__)
 
@@ -172,17 +171,13 @@ class ModelBase():
         return coverage_ratio
 
 
-    def build(self, is_gan=False):
+    def build(self):
         """ Build the model. Override for custom build methods """
         self.add_networks()
         self.load_models(swapped=False)
         self.build_autoencoders()
         self.log_summary()
         self.compile_predictors(initialize=True)
-        if is_gan:
-            self.compile_discriminators()
-            self.build_adversarial_autoencoders()
-            self.compile_adversarial_autoencoders()
 
 
     def build_autoencoders(self):
@@ -242,16 +237,6 @@ class ModelBase():
             self.store_input_shapes(model)
         if not self.output_shape:
             self.set_output_shape(model)
-
-            
-    def add_adversarial_autoencoder(self, side, model):
-        """ Add a adversarial auoencoder """
-        logger.debug("Adding adversarial autoencoder: (side: '%s', model: %s)", side, model)
-        if self.gpus > 1:
-            logger.debug("Converting to multi-gpu: side %s", side)
-            model = multi_gpu_model(model, self.gpus)
-        self.adversarial_autoencoders[side] = model
-            
 
     def store_input_shapes(self, model):
         """ Store the input and output shapes to state """
@@ -314,32 +299,6 @@ class ModelBase():
                 self.state.add_session_loss_names(side, loss_names)
                 self.history[side] = list()
         logger.debug("Compiled Predictors. Losses: %s", loss_names)
-
-
-    def compile_discriminators(self):
-        """ Compile the discriminators """
-        logger.debug("Compiling Discriminators")
-        learning_rate = self.config.get("learning_rate", 5e-5)
-        optimizer = self.get_optimizer(lr=learning_rate, beta_1=0.5, beta_2=0.999)
-        
-        for side in ("a", "b"):
-            model = self.networks["discriminator_{}".format(side)]
-            model.compile(optimizer=optimizer, loss='mse', metrics=['accuracy']))
-            
-        logger.debug("Compiled Discriminators.")
-
-
-    def compile_adversarial_autoencoders(self):
-        """ Compile the adversarial autoencoders """
-        logger.debug("Compiling Adversarial Autoencoders")
-        optimizer = self.get_optimizer(lr=learning_rate, beta_1=0.5, beta_2=0.999)
-        
-        for side, model in self.adversarial_autoencoders.items():
-            model.compile(loss=['mae', 'mse'],
-                          loss_weights=[1, 0.5],
-                          optimizer=optimizer)
-        
-        logger.debug("Compiled Adversarial Autoencoders")
 
 
     def get_optimizer(self, lr=5e-5, beta_1=0.5, beta_2=0.999):  # pylint: disable=invalid-name

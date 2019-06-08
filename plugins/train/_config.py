@@ -126,6 +126,17 @@ class Config(FaceswapConfig):
             section=section, title="coverage", datatype=float, default=62.5, rounding=1,
             min_max=(62.5, 100.0), info=COVERAGE_INFO)
 
+        # << GAN MODEL OPTIONS >> #
+        section = "model.gan"
+        self.add_section(title=section,
+                         info="GAN Faceswap Model" + ADDITIONAL_INFO)
+        self.add_item(
+            section=section, title="mask_type", datatype=str, default="facehull",
+            choices=MASK_TYPES, gui_radio=True, info=MASK_INFO)
+        self.add_item(
+            section=section, title="coverage", datatype=float, default=100, rounding=1,
+            min_max=(62.5, 100.0), info=COVERAGE_INFO)
+
         # << UNBALANCED MODEL OPTIONS >> #
         section = "model.unbalanced"
         self.add_section(title=section,

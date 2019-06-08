@@ -134,7 +134,7 @@ class NNBlocks():
         return var_x
 
     # <<< GAN Blocks >>> #
-    def normalization(inp, norm='none', group='16'):
+    def normalization(self, inp, norm='none', group='16'):
         """ GAN Normalization """
         if norm == 'layernorm':
             var_x = GroupNormalization(group=group)(inp)
@@ -162,7 +162,7 @@ class NNBlocks():
         return var_x
 
 
-    def upscale_ps(inp, filters, initializer, use_norm=False, norm="none"):
+    def upscale_ps(self, inp, filters, initializer, use_norm=False, norm="none"):
         """ GAN Upscaler - Pixel Shuffler """
         var_x = Conv2D(filters * 4,
                        kernel_size=3,
@@ -175,7 +175,7 @@ class NNBlocks():
         return var_x
 
 
-    def upscale_nn(inp, filters, use_norm=False, norm="none"):
+    def upscale_nn(self, inp, filters, use_norm=False, norm="none"):
         """ GAN Neural Network """
         var_x = UpSampling2D()(inp)
         var_x = reflect_padding_2d(var_x, 1)
@@ -187,7 +187,7 @@ class NNBlocks():
         return var_x
 
 
-    def reflect_padding_2d(inp, pad=1):
+    def reflect_padding_2d(self, inp, pad=1):
         """ GAN Reflect Padding (2D) """
         var_x = Lambda(lambda var_x: tf.pad(var_x,
                                             [[0, 0], [pad, pad], [pad, pad], [0, 0]],
@@ -195,7 +195,7 @@ class NNBlocks():
         return var_x
 
 
-    def conv_gan(inp, filters, use_norm=False, strides=2, norm='none'):
+    def conv_gan(self, inp, filters, use_norm=False, strides=2, norm='none'):
         """ GAN Conv Block """
         var_x = Conv2D(filters,
                        kernel_size=3,
@@ -209,7 +209,7 @@ class NNBlocks():
         return var_x
 
 
-    def conv_d_gan(inp, filters, use_norm=False, norm='none'):
+    def conv_d_gan(self, inp, filters, use_norm=False, norm='none'):
         """ GAN Discriminator Conv Block """
         var_x = inp
         var_x = Conv2D(filters,
@@ -224,7 +224,7 @@ class NNBlocks():
         return var_x
 
 
-    def res_block_gan(inp, filters, use_norm=False, norm='none'):
+    def res_block_gan(self, inp, filters, use_norm=False, norm='none'):
         """ GAN Res Block """
         var_x = Conv2D(filters,
                        kernel_size=3,
@@ -246,7 +246,7 @@ class NNBlocks():
         return var_x
 
 
-    def self_attn_block(inp, n_c, squeeze_factor=8):
+    def self_attn_block(self, inp, n_c, squeeze_factor=8):
         """ GAN Self Attention Block
         Code borrows from https://github.com/taki0112/Self-Attention-GAN-Tensorflow
         """
