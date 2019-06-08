@@ -38,7 +38,7 @@ class Trainer(TrainerBase):
         batch_A = self.batchers['a'].get_next(do_preview)
         warped_A = batch_A[0]
         target_A = batch_A[1]
-        
+
         batch_B = self.batchers['b'].get_next(do_preview)
         warped_B = batch_B[0]
         target_B = batch_B[1]

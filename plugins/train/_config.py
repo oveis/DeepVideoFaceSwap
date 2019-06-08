@@ -131,7 +131,7 @@ class Config(FaceswapConfig):
         self.add_section(title=section,
                          info="GAN Faceswap Model" + ADDITIONAL_INFO)
         self.add_item(
-            section=section, title="mask_type", datatype=str, default="facehull",
+            section=section, title="mask_type", datatype=str, default="none",
             choices=MASK_TYPES, gui_radio=True, info=MASK_INFO)
         self.add_item(
             section=section, title="coverage", datatype=float, default=100, rounding=1,
