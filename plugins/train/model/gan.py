@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """ GAN Model """
 
+from keras.initializers import RandomNormal
 from keras.layers import Conv2D, Dense, Flatten, Input, Lambda, Reshape, add, concatenate, multiply
 from keras.models import Model as KerasModel
-from keras.initializers import RandomNormal
+from keras.utils import multi_gpu_model
 from ._base import ModelBase, logger
 
 
