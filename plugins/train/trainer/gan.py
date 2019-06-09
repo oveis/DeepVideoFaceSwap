@@ -55,10 +55,10 @@ class Trainer(TrainerBase):
                                      for i in range(self.batch_size)])
 
         discriminatorA = self.model.networks["discriminator_a"].network
-        discriminatorB = self.model.networks["discriminator_a"].network
+        discriminatorB = self.model.networks["discriminator_b"].network
 
         valid = np.ones((self.batch_size, ) + discriminatorA.output_shape[1:])
-        fake = np.zeros((self.batch_size, ) + discriminatorB.output_shape[1:])
+        fake = np.zeros((self.batch_size, ) + discriminatorA.output_shape[1:])
 
         concat_real_inputA = np.array([np.concatenate([target_A[i], warped_A[i]], axis=-1)
                                       for i in range(self.batch_size)])
@@ -88,7 +88,7 @@ class Trainer(TrainerBase):
                 np.concatenate([valid, fake], axis=0))
             
         # ---------------------
-        #  Train Discriminators
+        #  Train Generators
         # ---------------------
         
         # Train the generators
