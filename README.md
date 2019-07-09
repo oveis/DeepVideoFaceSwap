@@ -1,3 +1,16 @@
+# Deep Face Swap with GAN
+
+## Contributors
+* Jinil Jang
+* Chi Wang
+
+## Document
+http://cs230.stanford.edu/projects_spring_2019/reports/18681213.pdf
+
+## Poster
+http://cs230.stanford.edu/projects_spring_2019/posters/18681474.pdf
+
+
 # How To setup and run the project
 
 ## Setup
