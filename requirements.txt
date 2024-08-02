@@ -14,7 +14,7 @@ imageio-ffmpeg
 ffmpy==0.2.2
 nvidia-ml-py3
 h5py==2.9.0
-Keras==2.2.4
+Keras==2.13.1
 google_images_download
 pynvml
 
